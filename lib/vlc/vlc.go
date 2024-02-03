@@ -2,25 +2,14 @@ package vlc
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 	"unicode"
-	"unicode/utf8"
 )
 
-const chunkSize = 8
-
-type encodingTable map[rune]string
-
-type BynaryChunk string
-
-type BynaryChunks []BynaryChunk
-
-type HexChunk string
-
-type HexChunks []HexChunk
-
 func Encode(str string) string {
+
+	str = "My name is Ted"
+
 	str = prepareText(str)
 
 	chunks := splitByChunks(encodeBinary(str), chunkSize)
@@ -28,7 +17,19 @@ func Encode(str string) string {
 	return chunks.ToHex().ToString()
 }
 
-// prepare text for ecnoding.
+func Decode(str string) string {
+	str = "20 30 3C 18 77 4A E4 4D 28"
+
+	bChunks := NewHexChunks(str).ToBin()
+
+	fmt.Printf(bChunks.Join())
+
+	decodingTree := getEncodingTable().DecodingTree()
+
+	return exportText(decodingTree.Decode(bChunks.Join()))
+}
+
+// prepares text for ecnoding.
 // changes upper character to ! +  lower character.
 // i.g.: My number -> !my number.
 func prepareText(str string) string {
@@ -42,6 +43,28 @@ func prepareText(str string) string {
 			buf.WriteRune(ch)
 		}
 	}
+	return buf.String()
+}
+
+// exportText export text after decoding.
+// i.g.: "!m name !tanya" -> "My name Tanya".
+func exportText(str string) string {
+	var buf strings.Builder
+	isCapital := false
+
+	for _, ch := range str {
+		if isCapital {
+			buf.WriteRune(unicode.ToUpper(ch))
+			isCapital = false
+			continue
+		}
+		if ch == '!' {
+			isCapital = true
+			continue
+		}
+		buf.WriteRune(ch)
+	}
+
 	return buf.String()
 }
 
@@ -94,89 +117,9 @@ func getEncodingTable() encodingTable {
 		'f': "000100",
 		'p': "0000101",
 		'w': "0000011",
-		'y': "000000",
+		'y': "0000001",
 		'j': "000000001",
 		'x': "00000000001",
 		'z': "000000000000",
 	}
-}
-
-// splitByChunks splits string into chunks into size.
-// i.g.: "0000000011111111" -> "00000000" "11111111", size = 8.
-func splitByChunks(str string, chunckSize int) BynaryChunks {
-
-	strLen := utf8.RuneCountInString(str)
-
-	chuncksCount := strLen / chunckSize
-	if strLen/chunckSize != 0 {
-		chuncksCount++
-	}
-
-	res := make(BynaryChunks, 0, chuncksCount)
-
-	var buf strings.Builder
-
-	for i, ch := range str {
-		buf.WriteString(string(ch))
-
-		if (i+1)%chunckSize == 0 {
-			res = append(res, BynaryChunk(buf.String()))
-			buf.Reset()
-		}
-	}
-
-	if buf.Len() != 0 {
-		lastChunk := buf.String()
-
-		lastChunk += strings.Repeat("0", chunckSize-len(lastChunk))
-		res = append(res, BynaryChunk(lastChunk))
-	}
-
-	return res
-}
-
-func (bc BynaryChunk) ToHex() HexChunk {
-	num, err := strconv.ParseUint(string(bc), 2, chunkSize)
-	if err != nil {
-		panic("can't parse binary chunk: " + err.Error())
-	}
-
-	res := strings.ToUpper(fmt.Sprintf("%x", num))
-
-	if len(res) == 1 {
-		res = "0" + res
-	}
-
-	return HexChunk(res)
-}
-
-func (bcs BynaryChunks) ToHex() HexChunks {
-	res := make(HexChunks, 0, len(bcs))
-
-	for _, chunk := range bcs {
-		res = append(res, chunk.ToHex())
-	}
-
-	return res
-}
-
-func (hcs HexChunks) ToString() string {
-	const sep = " "
-
-	switch len(hcs) {
-	case 0:
-		return ""
-	case 1:
-		return string(hcs[0])
-	}
-
-	var buf strings.Builder
-
-	buf.WriteString(string(hcs[0]))
-	for _, hc := range hcs[1:] {
-		buf.WriteString(sep)
-		buf.WriteString(string(hc))
-	}
-
-	return buf.String()
 }
