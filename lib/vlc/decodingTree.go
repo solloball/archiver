@@ -1,7 +1,6 @@
 package vlc
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -58,9 +57,8 @@ func (dt *DecodingTree) Decode(str string) string {
 
 	currentNode := dt
 
-	for i, ch := range str {
+	for _, ch := range str {
 		if currentNode.Value != "" {
-			fmt.Printf("%d ", i)
 			buf.WriteString(currentNode.Value)
 			currentNode = dt
 		}

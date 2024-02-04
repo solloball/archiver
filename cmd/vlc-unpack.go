@@ -50,7 +50,7 @@ func unpackedFileName(path string) string {
 	ext := filepath.Ext(fileName)
 	baseName := strings.TrimSuffix(fileName, ext)
 
-	return baseName + "." + packedExtensions
+	return baseName + "." + unpackedExtensions
 }
 
 func init() {

@@ -7,8 +7,6 @@ import (
 
 func Encode(str string) string {
 
-	str = "My name is Ted"
-
 	str = prepareText(str)
 
 	chunks := splitByChunks(encodeBinary(str), chunkSize)
