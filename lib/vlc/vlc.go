@@ -5,23 +5,21 @@ import (
 	"unicode"
 )
 
-func Encode(str string) string {
+func Encode(str string) []byte {
 
 	str = prepareText(str)
 
 	chunks := splitByChunks(encodeBinary(str), chunkSize)
 
-	return chunks.ToHex().ToString()
+	return chunks.Bytes()
 }
 
-func Decode(str string) string {
-	str = "20 30 3C 18 77 4A E4 4D 28"
-
-	bChunks := NewHexChunks(str).ToBin()
+func Decode(encodedData []byte) string {
+	bChunks := NewBinChunks(encodedData).Join()
 
 	decodingTree := getEncodingTable().DecodingTree()
 
-	return exportText(decodingTree.Decode(bChunks.Join()))
+	return exportText(decodingTree.Decode(bChunks))
 }
 
 // prepares text for ecnoding.
@@ -88,33 +86,34 @@ func bin(ch rune) string {
 
 func getEncodingTable() encodingTable {
 	return encodingTable{
-		' ': "11",
-		't': "1001",
-		'n': "10000",
-		's': "0101",
-		'r': "01000",
-		'd': "00101",
-		'!': "001000",
-		'c': "000101",
-		'm': "000011",
-		'g': "0000100",
-		'b': "0000010",
-		'v': "00000001",
-		'k': "0000000001",
-		'q': "000000000001",
-		'e': "101",
-		'o': "10001",
-		'a': "011",
-		'i': "01001",
-		'h': "0011",
-		'l': "001001",
-		'u': "00011",
-		'f': "000100",
-		'p': "0000101",
-		'w': "0000011",
-		'y': "0000001",
-		'j': "000000001",
-		'x': "00000000001",
-		'z': "000000000000",
+		'\n': "",
+		' ':  "11",
+		't':  "1001",
+		'n':  "10000",
+		's':  "0101",
+		'r':  "01000",
+		'd':  "00101",
+		'!':  "001000",
+		'c':  "000101",
+		'm':  "000011",
+		'g':  "0000100",
+		'b':  "0000010",
+		'v':  "00000001",
+		'k':  "0000000001",
+		'q':  "000000000001",
+		'e':  "101",
+		'o':  "10001",
+		'a':  "011",
+		'i':  "01001",
+		'h':  "0011",
+		'l':  "001001",
+		'u':  "00011",
+		'f':  "000100",
+		'p':  "0000101",
+		'w':  "0000011",
+		'y':  "0000001",
+		'j':  "000000001",
+		'x':  "00000000001",
+		'z':  "000000000000",
 	}
 }
