@@ -1,7 +1,6 @@
 package vlc
 
 import (
-	"fmt"
 	"strings"
 	"unicode"
 )
@@ -21,8 +20,6 @@ func Decode(str string) string {
 	str = "20 30 3C 18 77 4A E4 4D 28"
 
 	bChunks := NewHexChunks(str).ToBin()
-
-	fmt.Printf(bChunks.Join())
 
 	decodingTree := getEncodingTable().DecodingTree()
 

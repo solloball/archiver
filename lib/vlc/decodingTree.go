@@ -1,6 +1,7 @@
 package vlc
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -12,6 +13,9 @@ type DecodingTree struct {
 
 func (et encodingTable) DecodingTree() DecodingTree {
 	res := DecodingTree{}
+	res.One = nil
+	res.Zero = nil
+	res.Value = ""
 
 	for ch, code := range et {
 		res.Add(code, ch)
@@ -28,19 +32,25 @@ func (dt *DecodingTree) Add(code string, value rune) {
 		case '0':
 			if currentNode.Zero == nil {
 				currentNode.Zero = &DecodingTree{}
+				currentNode.Zero.One = nil
+				currentNode.Zero.Zero = nil
+				currentNode.Zero.Value = ""
 			}
 
 			currentNode = currentNode.Zero
 		case '1':
 			if currentNode.One == nil {
 				currentNode.One = &DecodingTree{}
+				currentNode.One.One = nil
+				currentNode.One.Zero = nil
+				currentNode.One.Value = ""
 			}
 
 			currentNode = currentNode.One
 		}
-
-		currentNode.Value = string(value)
 	}
+
+	currentNode.Value = string(value)
 }
 
 func (dt *DecodingTree) Decode(str string) string {
@@ -48,11 +58,11 @@ func (dt *DecodingTree) Decode(str string) string {
 
 	currentNode := dt
 
-	for _, ch := range str {
-		if dt.Value != "" {
-			buf.WriteString(dt.Value)
+	for i, ch := range str {
+		if currentNode.Value != "" {
+			fmt.Printf("%d ", i)
+			buf.WriteString(currentNode.Value)
 			currentNode = dt
-			continue
 		}
 
 		switch ch {
@@ -63,8 +73,8 @@ func (dt *DecodingTree) Decode(str string) string {
 		}
 	}
 
-	if dt.Value != "" {
-		buf.WriteString(dt.Value)
+	if currentNode.Value != "" {
+		buf.WriteString(currentNode.Value)
 		currentNode = dt
 	}
 

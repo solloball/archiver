@@ -44,6 +44,7 @@ func unpack(_ *cobra.Command, args []string) {
 	}
 }
 
+// TODO: refactor this
 func unpackedFileName(path string) string {
 	fileName := filepath.Base(path)
 	ext := filepath.Ext(fileName)
