@@ -3,6 +3,7 @@ package cmd
 import (
 	"archiver/lib/comperssion"
 	"archiver/lib/comperssion/vlc"
+	"archiver/lib/comperssion/vlc/table/shannon_fano"
 	"errors"
 	"io"
 	"os"
@@ -32,7 +33,7 @@ func pack(cmd *cobra.Command, args []string) {
 
 	switch method {
 	case "vlc":
-		encoder = vlc.New()
+		encoder = vlc.New(shannon_fano.NewGenerator())
 	default:
 		cmd.PrintErr("unknown method")
 	}

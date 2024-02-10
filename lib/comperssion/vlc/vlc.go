@@ -1,86 +1,114 @@
 package vlc
 
 import (
+	"archiver/lib/comperssion/vlc/table"
+	"bytes"
+	"encoding/binary"
+	"encoding/gob"
+	"log"
 	"strings"
-	"unicode"
 )
 
-type EnocoderDecoder struct{}
-
-func New() EnocoderDecoder {
-	return EnocoderDecoder{}
+type EnocoderDecoder struct {
+	tblGenerator table.Generator
 }
 
-func (_ EnocoderDecoder) Encode(str string) []byte {
-
-	str = prepareText(str)
-
-	chunks := splitByChunks(encodeBinary(str), chunkSize)
-
-	return chunks.Bytes()
+func New(tblGenerator table.Generator) EnocoderDecoder {
+	return EnocoderDecoder{tblGenerator: tblGenerator}
 }
 
-func (_ EnocoderDecoder) Decode(encodedData []byte) string {
-	bChunks := NewBinChunks(encodedData).Join()
+func (ed EnocoderDecoder) Encode(str string) []byte {
 
-	decodingTree := getEncodingTable().DecodingTree()
+	tbl := ed.tblGenerator.NewTable(str)
 
-	return exportText(decodingTree.Decode(bChunks))
+	encoded := encodeBinary(str, tbl)
+
+	return buildEncodedFile(tbl, encoded)
 }
 
-// prepares text for ecnoding.
-// changes upper character to ! +  lower character.
-// i.g.: My number -> !my number.
-func prepareText(str string) string {
-	var buf strings.Builder
+func (ed EnocoderDecoder) Decode(encodedData []byte) string {
+	tbl, data := parseFile(encodedData)
 
-	for _, ch := range str {
-		if unicode.IsUpper(ch) {
-			buf.WriteRune('!')
-			buf.WriteRune(unicode.ToLower(ch))
-		} else {
-			buf.WriteRune(ch)
-		}
+	return tbl.Decode(data)
+}
+
+func parseFile(data []byte) (table.EncodingTable, string) {
+	const (
+		tableSizeBytesCount = 4
+		dataSizeBytesCount  = 4
+	)
+
+	tableSizeBinary, data := data[:tableSizeBytesCount],
+		data[tableSizeBytesCount:]
+
+	dataSizeBinary, data := data[:dataSizeBytesCount],
+		data[dataSizeBytesCount:]
+
+	tableSize := binary.BigEndian.Uint32(tableSizeBinary)
+	dataSize := binary.BigEndian.Uint32(dataSizeBinary)
+
+	tblBinary, data := data[:tableSize], data[tableSize:]
+
+	tbl := decodeTable(tblBinary)
+
+	body := NewBinChunks(data).Join()
+
+	return tbl, body[:dataSize]
+}
+
+func buildEncodedFile(tbl table.EncodingTable, data string) []byte {
+	encodedTable := encodeTable(tbl)
+
+	var buf bytes.Buffer
+
+	buf.Write(encodeInt(len(encodedTable)))
+	buf.Write(encodeInt(len(data)))
+	buf.Write(encodedTable)
+	buf.Write(splitByChunks(data, chunkSize).Bytes())
+
+	return buf.Bytes()
+}
+
+func encodeInt(num int) []byte {
+	res := make([]byte, 4)
+	binary.BigEndian.PutUint32(res, uint32(num))
+
+	return res
+}
+
+func decodeTable(tblBinary []byte) table.EncodingTable {
+	var tbl table.EncodingTable
+
+	r := bytes.NewReader(tblBinary)
+	if err := gob.NewDecoder(r).Decode(&tbl); err != nil {
+		log.Fatal("can't decode table", err)
 	}
-	return buf.String()
+
+	return tbl
 }
 
-// exportText export text after decoding.
-// i.g.: "!m name !tanya" -> "My name Tanya".
-func exportText(str string) string {
-	var buf strings.Builder
-	isCapital := false
+func encodeTable(tbl table.EncodingTable) []byte {
+	var tableBuf bytes.Buffer
 
-	for _, ch := range str {
-		if isCapital {
-			buf.WriteRune(unicode.ToUpper(ch))
-			isCapital = false
-			continue
-		}
-		if ch == '!' {
-			isCapital = true
-			continue
-		}
-		buf.WriteRune(ch)
+	if err := gob.NewEncoder(&tableBuf).Encode(tbl); err != nil {
+		log.Fatal("can't serialize table", err)
 	}
 
-	return buf.String()
+	return tableBuf.Bytes()
 }
 
 // encodes str inti binary codes without whitespace.
-func encodeBinary(str string) string {
+func encodeBinary(str string, table table.EncodingTable) string {
 	var buf strings.Builder
 
 	for _, ch := range str {
-		buf.WriteString(bin(ch))
+		buf.WriteString(bin(ch, table))
 	}
 
 	return buf.String()
 }
 
-func bin(ch rune) string {
-	table := getEncodingTable()
-
+func bin(ch rune, table table.EncodingTable) string {
 	res, ok := table[ch]
 
 	if !ok {
@@ -88,38 +116,4 @@ func bin(ch rune) string {
 	}
 
 	return res
-}
-
-func getEncodingTable() encodingTable {
-	return encodingTable{
-		'\n': "",
-		' ':  "11",
-		't':  "1001",
-		'n':  "10000",
-		's':  "0101",
-		'r':  "01000",
-		'd':  "00101",
-		'!':  "001000",
-		'c':  "000101",
-		'm':  "000011",
-		'g':  "0000100",
-		'b':  "0000010",
-		'v':  "00000001",
-		'k':  "0000000001",
-		'q':  "000000000001",
-		'e':  "101",
-		'o':  "10001",
-		'a':  "011",
-		'i':  "01001",
-		'h':  "0011",
-		'l':  "001001",
-		'u':  "00011",
-		'f':  "000100",
-		'p':  "0000101",
-		'w':  "0000011",
-		'y':  "0000001",
-		'j':  "000000001",
-		'x':  "00000000001",
-		'z':  "000000000000",
-	}
 }
